@@ -1,0 +1,58 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Encriptador de archivos</title>
+    <link rel="stylesheet" href="/static/styles.css">
+</head>
+<body>
+    <div class="container">
+        <h1>Encriptador de archivos</h1>
+        <p>Selecciona un archivo para encriptarlo.</p>
+        <form id="uploadForm">
+            <input type="file" id="fileInput" name="file" required>
+            <button type="submit">Encriptar y Descargar</button>
+        </form>
+        <div id="message"></div>
+    </div>
+
+    <script>
+        document.getElementById('uploadForm').addEventListener('submit', async function(event) {
+            event.preventDefault();
+            const fileInput = document.getElementById('fileInput');
+            const messageDiv = document.getElementById('message');
+            messageDiv.textContent = 'Encriptando el archivo...';
+            
+            const formData = new FormData();
+            formData.append('file', fileInput.files[0]);
+
+            try {
+                const response = await fetch('/encrypt/', {
+                    method: 'POST',
+                    body: formData,
+                });
+                
+                if (response.ok) {
+                    messageDiv.textContent = '¡Archivo encriptado exitosamente! Descargando...';
+                    const blob = await response.blob();
+                    const url = window.URL.createObjectURL(blob);
+                    const a = document.createElement('a');
+                    a.style.display = 'none';
+                    a.href = url;
+                    a.download = `encrypted_${fileInput.files[0].name}`;
+                    document.body.appendChild(a);
+                    a.click();
+                    window.URL.revokeObjectURL(url);
+                } else {
+                    const errorData = await response.json();
+                    messageDiv.textContent = `Error: ${errorData.detail || 'No se pudo encriptar el archivo.'}`;
+                }
+            } catch (error) {
+                console.error('Error:', error);
+                messageDiv.textContent = 'Error al conectar con el servidor.';
+            }
+        });
+    </script>
+</body>
+</html>

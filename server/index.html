@@ -1,0 +1,18 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <title>Desencriptador de archivos</title>
+  <link rel="stylesheet" href="/static/styles.css"
+</head>
+<body>
+  <div class="container">
+    <h1>Desencriptador</h1>
+    <p>Sube un archivo encriptado para ver su contenido.</p>
+    <form action="/decrypt/" method="post" enctype="multipart/form-data">
+      <input type="file" name="file" required>
+      <button type="submit">Desencriptar</button>
+    </form>
+  </div>
+</body>
+</html>

@@ -1,0 +1,29 @@
+body {
+    font-family: Arial, sans-serif;
+    background-color: #f4f4f4;
+    display: flex;
+    height: 100vh;
+    margin: 35px;
+}
+h1 {
+    color: #333;
+}
+input[type="file"] {
+    display: block;
+    margin-bottom: 15px;
+}
+button {
+    background-color: #007bff;
+    color: #fff;
+    border: none;
+    padding: 5px 10px;
+    border-radius: 5px;
+    cursor: pointer;
+    font-size: 14px;
+}
+button:hover {
+    background-color: #0056b3;
+}
+#message {
+    margin-top: 25px;
+}
