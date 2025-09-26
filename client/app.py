@@ -1,3 +1,4 @@
+# app.py client:
 from fastapi import FastAPI, UploadFile, HTTPException
 from fastapi.responses import FileResponse, HTMLResponse, StreamingResponse
 from fastapi.staticfiles import StaticFiles
@@ -12,7 +13,7 @@ import io
 app = FastAPI()
 app.mount("/static", StaticFiles(directory="."), name="static")
 
-@app.get("/", response_class=HTMLResponse)
+@app.get("/", response_class=FileResponse) # Se usa FileResponse para servir index.html
 async def getForm():
     return FileResponse("index.html")
 

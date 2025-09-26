@@ -14,14 +14,37 @@
             <input type="file" id="fileInput" name="file" required>
             <button type="submit">Encriptar y Descargar</button>
         </form>
+        
+        <hr>
+
+        <h1>Desencriptador de archivos</h1>
+        <p>Sube un archivo encriptado para ver su contenido.</p>
+        <form id="sendForm">
+            <input type="file" id="encfileInput" name="encfile" required>
+            <button type="submit">Enviar y Previsualizar</button>
+        </form>
+        
         <div id="message"></div>
+        <div id="previewContainer" style="margin-top: 20px;">
+            </div>
     </div>
 
     <script>
+        const messageDiv = document.getElementById('message');
+        const previewContainer = document.getElementById('previewContainer');
+        const decryptServerUrl = 'http://127.0.0.1:8001/decrypt/'; // Asegúrate de que esta URL apunte al servidor de desencriptación
+
+        // Función auxiliar para limpiar la zona de mensajes y previsualización
+        function cleanDisplay() {
+            messageDiv.textContent = '';
+            previewContainer.innerHTML = '';
+        }
+
+        // --- Lógica de Encriptación (Solo se ajusta el manejo de mensajes/limpieza) ---
         document.getElementById('uploadForm').addEventListener('submit', async function(event) {
             event.preventDefault();
+            cleanDisplay(); // Limpiar antes de la nueva operación
             const fileInput = document.getElementById('fileInput');
-            const messageDiv = document.getElementById('message');
             messageDiv.textContent = 'Encriptando el archivo...';
             
             const formData = new FormData();
@@ -35,12 +58,24 @@
                 
                 if (response.ok) {
                     messageDiv.textContent = '¡Archivo encriptado exitosamente! Descargando...';
+
                     const blob = await response.blob();
+                    
+                    // Intenta obtener el nombre del archivo del encabezado
+                    const contentDisposition = response.headers.get('Content-Disposition');
+                    let filename = `encrypted_${fileInput.files[0].name}`;
+                    if (contentDisposition) {
+                        const match = contentDisposition.match(/filename="(.+?)"/);
+                        if (match) {
+                            filename = match[1];
+                        }
+                    }
+
                     const url = window.URL.createObjectURL(blob);
                     const a = document.createElement('a');
                     a.style.display = 'none';
                     a.href = url;
-                    a.download = `encrypted_${fileInput.files[0].name}`;
+                    a.download = filename;
                     document.body.appendChild(a);
                     a.click();
                     window.URL.revokeObjectURL(url);
@@ -50,7 +85,97 @@
                 }
             } catch (error) {
                 console.error('Error:', error);
-                messageDiv.textContent = 'Error al conectar con el servidor.';
+                messageDiv.textContent = 'Error al conectar con el servidor de encriptación.';
+            }
+        });
+
+        // --- Lógica de Desencriptación y Vista Previa (MODIFICADA para el cliente) ---
+        document.getElementById('sendForm').addEventListener('submit', async function(event) {
+            event.preventDefault();
+            cleanDisplay(); // Limpiar antes de la nueva operación
+            const encfileInput = document.getElementById('encfileInput');
+            
+            if (encfileInput.files.length === 0) {
+                messageDiv.textContent = 'Por favor, selecciona un archivo encriptado.';
+                return;
+            }
+
+            messageDiv.textContent = 'Enviando y desencriptando el archivo...';
+            
+            const formData = new FormData();
+            formData.append('file', encfileInput.files[0]);
+
+            try {
+                console.log('Intentando fetch a:', decryptServerUrl);
+                // Petición al servidor de desencriptación
+                const response = await fetch(decryptServerUrl, {
+                    method: 'POST',
+                    body: formData
+                });
+                
+                console.log('Respuesta recibida:', response);
+                if (response.ok) {
+                    messageDiv.textContent = '¡Archivo desencriptado exitosamente! Generando vista previa...';
+
+                    const blob = await response.blob();
+                    const mimeType = response.headers.get('Content-Type'); // Obtiene el tipo MIME del encabezado de respuesta
+                    
+                    // Obtener el nombre de archivo del encabezado Content-Disposition
+                    const contentDisposition = response.headers.get('Content-Disposition');
+                    let filename = `decrypted_${encfileInput.files[0].name.replace(/^encrypted_/, '').replace(/\.fernet$/, '')}`;
+                    if (contentDisposition) {
+                        const match = contentDisposition.match(/filename="(.+?)"/);
+                        if (match) {
+                            filename = match[1];
+                        }
+                    }
+
+                    // Crea un URL temporal en el cliente para el Blob
+                    const objectUrl = URL.createObjectURL(blob);
+                    
+                    let previewHtml = '';
+
+                    // 1. Lógica de Vista Previa en el Cliente (MIME-Type basado en la respuesta)
+                    if (mimeType.startsWith('image/')) {
+                        previewHtml = `<img src="${objectUrl}" alt="${filename}" style="max-width:100%; border: 1px solid #ccc; margin-bottom: 10px;">`;
+                    } else if (mimeType === 'application/pdf') {
+                        previewHtml = `<iframe src="${objectUrl}" width="100%" height="600px" style="border: 1px solid #ccc; margin-bottom: 10px;"></iframe>`;
+                    } else if (mimeType.startsWith('text/')) {
+                         // Para archivos de texto (txt, csv, etc.), se lee y se muestra como texto pre-formateado
+                        const textContent = await blob.text();
+                        previewHtml = `<div style="white-space: pre-wrap; max-height: 400px; overflow-y: scroll; border: 1px solid #ccc; padding: 10px; margin-bottom: 10px;">${textContent}</div>`;
+                    } else {
+                        previewHtml = `<p>El tipo de archivo (<strong>${mimeType}</strong>) no puede mostrarse directamente en el navegador. Se sugiere descargarlo.</p>`;
+                    }
+
+                    // 2. Agregar el enlace de descarga
+                    previewHtml += `
+                        <p>
+                            <a href="${objectUrl}" download="${filename}" class="download-link">
+                                Descargar archivo desencriptado (${filename})
+                            </a>
+                        </p>
+                    `;
+                    
+                    previewContainer.innerHTML = previewHtml;
+
+                    // Nota: Se debería limpiar el Object URL para liberar memoria, pero se deja simple
+                    // y se espera que el navegador lo haga automáticamente o al cargar un nuevo archivo.
+
+                } else {
+                    // Si el servidor devuelve un error (ej: 400, 500), se intenta obtener el detalle
+                    let errorDetail = 'No se pudo desencriptar el archivo. Error desconocido.';
+                    try {
+                        const errorData = await response.json();
+                        errorDetail = `Error: ${errorData.detail || errorDetail}`;
+                    } catch (e) {
+                        errorDetail = `Error en la respuesta del servidor (${response.status} ${response.statusText}).`;
+                    }
+                    messageDiv.textContent = errorDetail;
+                }
+            } catch (error) {
+                console.error('Error:', error);
+                messageDiv.textContent = 'Error al conectar con el servidor de desencriptación.';
             }
         });
     </script>
