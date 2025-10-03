@@ -1,6 +1,5 @@
-# app.py client:
 from fastapi import FastAPI, UploadFile, HTTPException
-from fastapi.responses import FileResponse, HTMLResponse, StreamingResponse
+from fastapi.responses import FileResponse, StreamingResponse
 from fastapi.staticfiles import StaticFiles
 
 from cryptography import x509
@@ -10,10 +9,10 @@ from cryptography.hazmat.primitives.asymmetric import padding
 
 import io
 
-app = FastAPI()
+app = FastAPI(title="Encrypt para server")
 app.mount("/static", StaticFiles(directory="."), name="static")
 
-@app.get("/", response_class=FileResponse) # Se usa FileResponse para servir index.html
+@app.get("/", response_class=FileResponse) #se usa FileResponse para servir index.html
 async def getForm():
     return FileResponse("index.html")
 
